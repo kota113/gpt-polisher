@@ -177,7 +177,7 @@ export async function rewriteWithGemini(
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "x-goog-user-project": projectId,
-        "x-goog-api-client": "gemini-rewrite-mcp/0.1.0",
+        "x-goog-api-client": "gpt-polisher/0.1.0",
         "content-type": "application/json",
       },
       body: JSON.stringify({

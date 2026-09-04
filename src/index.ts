@@ -6,7 +6,7 @@ import { GoogleHandler, type McpProps } from "./google-handler";
 import { getSelectedProject, refreshAccessToken, rewriteWithGemini } from "./google";
 
 export class MyMCP extends McpAgent<Env, Record<string, never>, McpProps> {
-  server = new McpServer({ name: "Gemini Rewrite MCP", version: "0.1.0" });
+  server = new McpServer({ name: "GPT Polisher", version: "0.1.0" });
 
   async init() {
     this.server.tool(

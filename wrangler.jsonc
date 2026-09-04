@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "gemini-rewrite-mcp",
+  "name": "gpt-polisher",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-04",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
