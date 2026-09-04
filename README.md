@@ -1,6 +1,9 @@
 # GPT Polisher
 
-GPT Polisher is a hosted remote MCP server that rewrites AI responses with Gemini to make them clearer and more concise without adding new information.
+URL: https://gpt-polisher.kota113.com  
+
+
+GPT Polisher is a hosted remote MCP server that rewrites ChatGPT's responses with Gemini to make them clearer and more concise without modifying information.
 
 ## How it works
 
