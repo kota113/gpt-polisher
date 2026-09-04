@@ -1,0 +1,18 @@
+---
+import {SetupPage} from "../components/SetupPage";
+import "../styles/globals.css";
+
+const state = Astro.url.searchParams.get("state") ?? "";
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width"/>
+    <title>Choose a Google Cloud project</title>
+</head>
+<body>
+<SetupPage state={state} client:load/>
+</body>
+</html>

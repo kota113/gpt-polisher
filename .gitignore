@@ -1,4 +1,7 @@
 node_modules/
+.astro/
+dist/
+.idea/
 .wrangler/
 .dev.vars
 .env

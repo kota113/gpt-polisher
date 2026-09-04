@@ -25,6 +25,18 @@ export type GoogleTokenResponse = {
   id_token?: string;
 };
 
+export type GoogleAccessToken = {
+  accessToken: string;
+  expiresAt: number;
+};
+
+export class GeminiApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "GeminiApiError";
+  }
+}
+
 export async function exchangeCode(env: Env, code: string, redirectUri: string): Promise<GoogleTokenResponse> {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -41,7 +53,7 @@ export async function exchangeCode(env: Env, code: string, redirectUri: string):
   return (await response.json()) as GoogleTokenResponse;
 }
 
-export async function refreshAccessToken(env: Env, userId: string): Promise<string> {
+export async function refreshAccessToken(env: Env, userId: string): Promise<GoogleAccessToken> {
   const stored = await env.USER_CREDENTIALS.get<StoredGoogleCredential>(`google:${userId}`, "json");
   if (!stored) throw new Error("Google credential not found. Reconnect the MCP app.");
   const refreshToken = await decryptString(stored.refreshToken, env.CREDENTIAL_ENCRYPTION_KEY);
@@ -57,7 +69,10 @@ export async function refreshAccessToken(env: Env, userId: string): Promise<stri
   });
   if (!response.ok) throw new Error(`Google token refresh failed: ${response.status} ${await response.text()}`);
   const body = (await response.json()) as GoogleTokenResponse;
-  return body.access_token;
+  return {
+    accessToken: body.access_token,
+    expiresAt: Date.now() + Math.max(0, body.expires_in ?? 0) * 1000,
+  };
 }
 
 export async function saveRefreshToken(
@@ -85,12 +100,6 @@ export async function setSelectedProject(env: Env, userId: string, projectId: st
   stored.selectedProjectId = projectId;
   stored.updatedAt = new Date().toISOString();
   await env.USER_CREDENTIALS.put(key, JSON.stringify(stored));
-}
-
-export async function getSelectedProject(env: Env, userId: string): Promise<string> {
-  const stored = await env.USER_CREDENTIALS.get<StoredGoogleCredential>(`google:${userId}`, "json");
-  if (!stored?.selectedProjectId) throw new Error("No Google Cloud project selected. Reconnect the MCP app.");
-  return stored.selectedProjectId;
 }
 
 export async function getUserInfo(accessToken: string): Promise<{ id: string; email: string; name: string }> {
@@ -185,7 +194,7 @@ export async function rewriteWithGemini(
       }),
     },
   );
-  if (!response.ok) throw new Error(`Gemini API failed: ${response.status} ${await response.text()}`);
+  if (!response.ok) throw new GeminiApiError(response.status, `Gemini API failed: ${response.status} ${await response.text()}`);
   const body = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
   if (!text) throw new Error("Gemini returned no text");
