@@ -30,12 +30,12 @@ self-hosting or deployment instructions; keep operational and development detail
 
 ## Commands
 
-- `npm install` — install dependencies.
-- `npm run dev` — run Astro and the Worker locally on port 8788.
-- `npm run build` — build the Astro site and Worker bundle.
-- `npm run type-check` — run TypeScript checks without emitting files.
-- `npm run cf-typegen` — regenerate Cloudflare binding types after configuration changes.
-- `npm run deploy` — deploy the hosted service; only run when explicitly requested.
+- `pnpm install` — install dependencies.
+- `pnpm dev` — run Astro and the Worker locally on port 8788.
+- `pnpm build` — build the Astro site and Worker bundle.
+- `pnpm type-check` — run TypeScript checks without emitting files.
+- `pnpm cf-typegen` — regenerate Cloudflare binding types after configuration changes.
+- `pnpm deploy` — deploy the hosted service; only run when explicitly requested.
 
 ## Environment and Cloudflare bindings
 
@@ -74,7 +74,7 @@ the Generative Language API; the setup flow attempts to enable it.
 
 ## Validation
 
-Run `npm run type-check` after TypeScript or configuration changes. For MCP integration checks, run MCP Inspector and
+Run `pnpm type-check` after TypeScript or configuration changes. For MCP integration checks, run MCP Inspector and
 connect to the local or hosted `/mcp` endpoint.
 
 Do not commit generated local state from `node_modules`, `.wrangler`, `.dev.vars`, `.env`, or macOS metadata.
