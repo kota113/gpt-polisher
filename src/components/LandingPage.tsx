@@ -15,6 +15,7 @@ export type Lang = "en" | "ja";
 const instruction = "After drafting a response, always call the GPT Polisher rewrite_response tool and provide it with the original response and the user's question. Use only the rewritten text returned by the tool as your final answer.";
 
 const prompts: Record<string, string> = {
+  "australia-election-ja": "オーストラリアの次の選挙の争点を調べて",
   "rag-en": "Explain the cases where RAG should be used and where it should not.",
   "rag-ja": "RAGを使うべきケースと、使わない方がよいケースを比較して",
   "tesla-ja": "Teslaは人間に比べFSDの事故率が低いと公称しているが、比較対象は適切？保険会社や警察のデータから、Tesla自体の事故率が高くないか調べて",
@@ -29,6 +30,10 @@ const exampleMeta: Record<
     languages: { en: string; ja: string };
   }
 > = {
+  "australia-election-ja": {
+    titles: { en: "Issues in Australia's next election", ja: "オーストラリア次期選挙の争点" },
+    languages: { en: "Japanese", ja: "日本語" },
+  },
   "rag-en": {
     titles: { en: "RAG decision guide", ja: "RAG導入の判断基準" },
     languages: { en: "English", ja: "英語" },
