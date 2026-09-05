@@ -1,18 +1,26 @@
 ---
-import {LandingPage} from "../components/LandingPage";
+import {LandingPage, type Lang} from "../components/LandingPage";
 import "../styles/globals.css";
 
 const endpoint = new URL("/mcp", Astro.url).href;
+const paramLang = Astro.url.searchParams.get("lang");
+const acceptLang = Astro.request.headers.get("accept-language") ?? "";
+const initialLang: Lang =
+  paramLang === "ja" || paramLang === "en"
+    ? paramLang
+    : acceptLang.toLowerCase().includes("ja")
+      ? "ja"
+      : "en";
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={initialLang}>
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width"/>
-    <title>GPT Polisher</title>
+    <title>{initialLang === "ja" ? "GPT Polisher - ChatGPTの回答をGeminiで自然に推敲" : "GPT Polisher"}</title>
 </head>
 <body>
-<LandingPage endpoint={endpoint} client:load/>
+<LandingPage endpoint={endpoint} initialLang={initialLang} client:load/>
 </body>
 </html>
