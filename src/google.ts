@@ -1,4 +1,6 @@
 import { decryptString, encryptString, type EncryptedValue } from "./crypto";
+import { protectSpecialContent, restoreSpecialContent } from "./protected-content";
+import { buildRewritePrompt } from "./rewrite-prompt";
 
 export const GOOGLE_SCOPES = [
   "openid",
@@ -177,7 +179,8 @@ export async function rewriteWithGemini(
   userQuestion: string,
   originalAnswer: string,
 ): Promise<string> {
-  const prompt = `You are a response editor.\n\nYour task is to rewrite the original answer to be easier to read.\n\nRules:\n1. Use only the information contained in the original answer. Do not add new facts, knowledge, reasoning, or fill in anything missing. The user question is provided only to help judge which parts are most relevant — do not use it as a source of information.\n2. Rewrite the answer to be clear and concise. If the original answer is already concise, make only minimal changes.\n3. Return ONLY the rewritten answer.\n4. Rewrite in the same language as the original answer.\n\n<user_question>\n${userQuestion}\n</user_question>\n\n<original_answer>\n${originalAnswer}\n</original_answer>`;
+  const protectedAnswer = protectSpecialContent(originalAnswer);
+  const prompt = buildRewritePrompt(userQuestion, protectedAnswer.text);
 
   const response = await fetch(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
@@ -198,5 +201,5 @@ export async function rewriteWithGemini(
   const body = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
   if (!text) throw new Error("Gemini returned no text");
-  return text;
+  return restoreSpecialContent(text, protectedAnswer);
 }
