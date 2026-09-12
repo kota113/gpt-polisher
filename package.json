@@ -8,9 +8,9 @@
     "dev": "cd apps/astro && astro dev",
     "build": "astro build --root apps/astro",
     "preview": "cd apps/astro && astro preview",
-    "deploy": "pnpm build && wrangler deploy --config apps/astro/dist/server/wrangler.json",
+    "deploy": "pnpm build && wrangler deploy --config apps/astro/dist/server/wrangler.json --autoconfig=false",
     "type-check": "astro check --root apps/astro && tsc --noEmit -p apps/hono",
-    "cf-typegen": "wrangler types --config apps/hono/wrangler.jsonc apps/hono/worker-configuration.d.ts",
+    "cf-typegen": "wrangler types worker-configuration.d.ts",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:go": "cd vps/antigravity && go test ./..."
   },

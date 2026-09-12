@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  adapter: cloudflare({ configPath: new URL("../hono/wrangler.jsonc", import.meta.url).pathname }),
+  adapter: cloudflare({ configPath: new URL("../../wrangler.jsonc", import.meta.url).pathname }),
   integrations: [react()],
   output: "server",
   server: {
