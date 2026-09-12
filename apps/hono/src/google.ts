@@ -1,6 +1,5 @@
-import { decryptString, encryptString, type EncryptedValue } from "./crypto";
-import { protectSpecialContent, restoreSpecialContent } from "./protected-content";
-import { buildRewritePrompt } from "./rewrite-prompt";
+import { decryptString, encryptString, type EncryptedValue } from "./crypto.ts";
+import { rewriteWith } from "./rewrite.ts";
 
 export const GOOGLE_SCOPES = [
   "openid",
@@ -33,8 +32,10 @@ export type GoogleAccessToken = {
 };
 
 export class GeminiApiError extends Error {
-  constructor(public readonly status: number, message: string) {
+  readonly status: number;
+  constructor(status: number, message: string) {
     super(message);
+    this.status = status;
     this.name = "GeminiApiError";
   }
 }
@@ -104,13 +105,13 @@ export async function setSelectedProject(env: Env, userId: string, projectId: st
   await env.USER_CREDENTIALS.put(key, JSON.stringify(stored));
 }
 
-export async function getUserInfo(accessToken: string): Promise<{ id: string; email: string; name: string }> {
+export async function getUserInfo(accessToken: string): Promise<{ id: string; email: string; name: string; emailVerified: boolean }> {
   const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw new Error(`Failed to fetch Google profile: ${response.status}`);
-  const body = (await response.json()) as { sub: string; email: string; name?: string };
-  return { id: body.sub, email: body.email, name: body.name ?? body.email };
+  const body = (await response.json()) as { sub: string; email: string; name?: string; email_verified?: boolean };
+  return { id: body.sub, email: body.email, name: body.name ?? body.email, emailVerified: body.email_verified === true };
 }
 
 export type CloudProject = {
@@ -179,27 +180,27 @@ export async function rewriteWithGemini(
   userQuestion: string,
   originalAnswer: string,
 ): Promise<string> {
-  const protectedAnswer = protectSpecialContent(originalAnswer);
-  const prompt = buildRewritePrompt(userQuestion, protectedAnswer.text);
+  return rewriteWith(async (prompt) => {
 
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "x-goog-user-project": projectId,
-        "x-goog-api-client": "gpt-polisher/0.1.0",
-        "content-type": "application/json",
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "x-goog-user-project": projectId,
+          "x-goog-api-client": "gpt-polisher/0.1.0",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+        }),
       },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      }),
-    },
-  );
-  if (!response.ok) throw new GeminiApiError(response.status, `Gemini API failed: ${response.status} ${await response.text()}`);
-  const body = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-  if (!text) throw new Error("Gemini returned no text");
-  return restoreSpecialContent(text, protectedAnswer);
+    );
+    if (!response.ok) throw new GeminiApiError(response.status, `Gemini API failed: ${response.status} ${await response.text()}`);
+    const body = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = body.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+    if (!text) throw new Error("Gemini returned no text");
+    return text;
+  }, userQuestion, originalAnswer);
 }

@@ -10,9 +10,11 @@ import {
   refreshAccessToken,
   saveRefreshToken,
   setSelectedProject,
-} from "./google";
+} from "./google.ts";
 
-export type McpProps = { userId: string; email: string; name: string; projectId: string };
+import { isPrivateEmailAllowed, requestsPrivateMcp } from "./private/mcp/access.ts";
+
+export type McpProps = { userId: string; email: string; name: string; projectId: string; emailVerified?: boolean };
 
 type Bindings = Env & { OAUTH_PROVIDER: OAuthHelpers };
 type AppContext = Context<{ Bindings: Bindings }>;
@@ -56,7 +58,7 @@ function clearStateCookie(): string {
 }
 
 type PendingAuth = { oauthReqInfo: AuthRequest; createdAt: number };
-type PendingSetup = { oauthReqInfo: AuthRequest; userId: string; email: string; name: string; createdAt: number };
+type PendingSetup = { oauthReqInfo: AuthRequest; userId: string; email: string; name: string; emailVerified: boolean; createdAt: number };
 
 app.get("/authorize", async (c) => {
   const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
@@ -71,12 +73,13 @@ app.get("/authorize", async (c) => {
   url.searchParams.set("client_id", c.env.GOOGLE_CLIENT_ID);
   url.searchParams.set("redirect_uri", callback);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", GOOGLE_SCOPES);
-  url.searchParams.set("access_type", "offline");
+  const privateRequest = requestsPrivateMcp(oauthReqInfo.resource, c.req.url);
+  url.searchParams.set("scope", privateRequest ? "openid email profile" : GOOGLE_SCOPES);
+  if (!privateRequest) url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "consent");
-  url.searchParams.set("include_granted_scopes", "true");
+  if (!privateRequest) url.searchParams.set("include_granted_scopes", "true");
   url.searchParams.set("state", state);
-  if (c.env.HOSTED_DOMAIN) url.searchParams.set("hd", c.env.HOSTED_DOMAIN);
+  if (!privateRequest && c.env.HOSTED_DOMAIN) url.searchParams.set("hd", c.env.HOSTED_DOMAIN);
 
   return new Response(null, {
     status: 302,
@@ -96,8 +99,20 @@ app.get("/callback", async (c) => {
 
   try {
     const token = await exchangeCode(c.env, code, new URL("/callback", c.req.url).href);
-    if (!token.refresh_token) return c.text("Google did not return a refresh token. Revoke this app in your Google Account and reconnect.", 400);
     const profile = await getUserInfo(token.access_token);
+    const privateRequest = requestsPrivateMcp(pending.oauthReqInfo.resource, c.req.url);
+    if (privateRequest) {
+      if (!isPrivateEmailAllowed(c.env.PRIVATE_MCP_ALLOWED_EMAILS, profile)) return c.text("Forbidden", 403);
+      const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
+        request: pending.oauthReqInfo,
+        userId: profile.id,
+        metadata: { label: profile.name },
+        scope: pending.oauthReqInfo.scope,
+        props: { userId: profile.id, email: profile.email, name: profile.name, emailVerified: profile.emailVerified },
+      });
+      return new Response(null, { status: 302, headers: { Location: redirectTo, "Set-Cookie": clearStateCookie() } });
+    }
+    if (!token.refresh_token) return c.text("Google did not return a refresh token. Revoke this app in your Google Account and reconnect.", 400);
     await saveRefreshToken(c.env, profile.id, token.refresh_token, profile);
 
     const setupState = randomToken();
@@ -106,6 +121,7 @@ app.get("/callback", async (c) => {
       userId: profile.id,
       email: profile.email,
       name: profile.name,
+      emailVerified: profile.emailVerified,
       createdAt: Date.now()
     };
     await c.env.OAUTH_KV.put(`setup:${setupState}`, JSON.stringify(setup), {expirationTtl: 900});
@@ -172,7 +188,7 @@ async function finishSetup(c: AppContext, state: string, projectId: string, crea
       userId: setup.userId,
       metadata: {label: setup.name},
       scope: setup.oauthReqInfo.scope,
-      props: {userId: setup.userId, email: setup.email, name: setup.name, projectId} satisfies McpProps,
+      props: {userId: setup.userId, email: setup.email, name: setup.name, projectId, emailVerified: setup.emailVerified} satisfies McpProps,
     });
     await c.env.OAUTH_KV.delete(`setup:${state}`);
     return c.json({redirectTo});

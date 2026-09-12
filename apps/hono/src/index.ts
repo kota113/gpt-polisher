@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpAgent } from "agents/mcp";
-import { z } from "zod";
+import { registerRewriteTool } from "./mcp-tools";
 import type { McpProps } from "./google-handler";
 import { GeminiApiError, type GoogleAccessToken, refreshAccessToken, rewriteWithGemini } from "./google";
 
@@ -42,29 +42,16 @@ export class MyMCP extends McpAgent<Env, Record<string, never>, McpProps> {
   }
 
   async init() {
-    this.server.tool(
-      "rewrite_response",
-      "Rewrite an AI response with Gemini 3.8 Flash for clarity and concision without adding information. Use the original answer as the only factual source.",
-      {
-        user_question: z.string().describe("The user's original question. Used only to judge relevance."),
-        original_answer: z.string().describe("The answer to rewrite. This is the only factual source."),
-      },
-      async ({ user_question, original_answer }) => this.keepAliveWhile(async () => {
-        try {
-          const rewritten = await this.rewriteResponse(user_question, original_answer);
-          return { content: [{ type: "text", text: rewritten }] };
-        } catch (error) {
-          console.error(JSON.stringify({
-            event: "gemini_rewrite_failed",
-            userId: this.props!.userId,
-            message: error instanceof Error ? error.message : "Unknown rewrite error",
-            timestamp: new Date().toISOString(),
-          }));
-          return {
-            content: [{ type: "text", text: original_answer }],
-          };
-        }
-      }),
+    registerRewriteTool(
+      this.server,
+      (question, answer) => this.rewriteResponse(question, answer),
+      (work) => this.keepAliveWhile(work),
+      (error) => console.error(JSON.stringify({
+        event: "gemini_rewrite_failed",
+        userId: this.props!.userId,
+        message: error instanceof Error ? error.message : "Unknown rewrite error",
+        timestamp: new Date().toISOString(),
+      })),
     );
 
     this.server.tool("connection_info", "Show the Google account and quota project currently linked to this MCP connection.", {}, async () => ({

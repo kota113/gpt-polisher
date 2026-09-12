@@ -1,0 +1,24 @@
+[Unit]
+Description=GPT Polisher Antigravity gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gpt-polisher
+Group=gpt-polisher
+EnvironmentFile=/etc/gpt-polisher-antigravity.env
+ExecStart=/usr/local/bin/antigravity-gateway
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=gpt-polisher
+WorkingDirectory=/var/lib/gpt-polisher
+ReadWritePaths=/var/lib/gpt-polisher
+
+[Install]
+WantedBy=multi-user.target

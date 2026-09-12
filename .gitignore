@@ -6,3 +6,4 @@ dist/
 .dev.vars
 .env
 .DS_Store
+/vps/antigravity/antigravity-gateway
