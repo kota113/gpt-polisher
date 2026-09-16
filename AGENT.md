@@ -35,7 +35,8 @@ self-hosting or deployment instructions; keep operational and development detail
 - `pnpm build` — build the Astro site and Worker bundle.
 - `pnpm type-check` — run TypeScript checks without emitting files.
 - `pnpm cf-typegen` — regenerate Cloudflare binding types after configuration changes.
-- `pnpm deploy` — deploy the hosted service; only run when explicitly requested.
+- `pnpm deploy` — deploy the already-built Astro output; only run when explicitly requested.
+- `pnpm deploy:local` — build Astro and deploy it in one command.
 
 ## Environment and Cloudflare bindings
 
@@ -163,8 +164,9 @@ empty answers, and broken placeholders cause the Worker to return the exact orig
    For development, set it in `.dev.vars`.
 5. Run `pnpm type-check`, `pnpm test`, `pnpm test:go`, and `pnpm build`. Deploy with `pnpm deploy` only when
    requested or when finishing a production rollout that already updated the VPC binding/secret.
-   `pnpm deploy` builds Astro then runs Wrangler against `apps/astro/dist/server/wrangler.json` with
-   `--autoconfig=false` so CI does not try to recreate `public/.assetsignore`.
+   `pnpm deploy` runs Wrangler against the generated `apps/astro/dist/server/wrangler.json` with
+   `--autoconfig=false` and `--no-bundle` so CI does not try to recreate `public/.assetsignore` or re-bundle
+   Astro's already-built virtual modules. Use `pnpm deploy:local` when the build has not run yet.
 
 Only `env.ANTIGRAVITY.fetch` can reach the gateway; there is no public-fetch or Gemini fallback on the private
 route. The VPC Service determines the destination and port, while `antigravity.internal` supplies the HTTP Host.

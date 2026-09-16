@@ -32,7 +32,7 @@ jobs:
               "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
               --paginate \
               --slurp \
-              --jq "[.[].check_runs[] | select(.app.slug == \"${CLOUDFLARE_CHECK_APP_SLUG}\")] | first | [.status, .conclusion] | @tsv")"
+              --jq "[.[].check_runs[] | select(.app.slug == \"${CLOUDFLARE_CHECK_APP_SLUG}\")] | sort_by(.created_at) | last | [.status, .conclusion] | @tsv")"
 
             status="${result%%$'\t'*}"
             conclusion="${result#*$'\t'}"
