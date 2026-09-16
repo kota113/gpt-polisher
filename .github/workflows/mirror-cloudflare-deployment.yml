@@ -1,0 +1,60 @@
+name: Mirror Cloudflare Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  checks: read
+  contents: read
+  deployments: write
+
+concurrency:
+  group: cloudflare-deployment-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://gpt-polisher.kota113.com
+
+    steps:
+      - name: Wait for Cloudflare Workers deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_CHECK_APP_SLUG: cloudflare-workers-and-pages
+        run: |
+          for attempt in {1..60}; do
+            result="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
+              --paginate \
+              --slurp \
+              --jq "[.[].check_runs[] | select(.app.slug == \"${CLOUDFLARE_CHECK_APP_SLUG}\")] | first | [.status, .conclusion] | @tsv")"
+
+            status="${result%%$'\t'*}"
+            conclusion="${result#*$'\t'}"
+
+            if [[ "${status}" == "completed" ]]; then
+              if [[ "${conclusion}" == "success" ]]; then
+                echo "Cloudflare Workers deployment succeeded."
+                exit 0
+              fi
+
+              echo "Cloudflare Workers deployment finished with conclusion: ${conclusion}" >&2
+              exit 1
+            fi
+
+            if [[ -n "${status}" ]]; then
+              echo "Cloudflare Workers deployment status: ${status} (attempt ${attempt}/60)"
+            else
+              echo "Cloudflare Workers check run has not appeared yet (attempt ${attempt}/60)."
+            fi
+
+            sleep 10
+          done
+
+          echo "Timed out waiting for the Cloudflare Workers check run." >&2
+          exit 1

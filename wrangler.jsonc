@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gpt-polisher",
+  "main": "apps/hono/src/worker.ts",
+  "compatibility_date": "2026-09-04",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "migrations": [
+    { "new_sqlite_classes": ["MyMCP"], "tag": "v1" },
+    { "new_sqlite_classes": ["PrivateMCP"], "tag": "v2" }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "class_name": "MyMCP", "name": "MCP_OBJECT" },
+      { "class_name": "PrivateMCP", "name": "PRIVATE_MCP_OBJECT" }
+    ]
+  },
+  "kv_namespaces": [
+    { "binding": "OAUTH_KV", "id": "90cfb6674bfc44cf9232f496d831bc94" },
+    { "binding": "USER_CREDENTIALS", "id": "8af40812efa440f3bd14b3efba2dddd7" }
+  ],
+  "vpc_services": [
+    {
+      "binding": "ANTIGRAVITY",
+      "service_id": "01a0939e-ccf9-7ce1-a5d3-3fc4d5c8fbaa",
+      "remote": true
+    }
+  ],
+  "vars": { "PRIVATE_MCP_ALLOWED_EMAILS": "iwa124816@gmail.com" },
+  "observability": { "enabled": true },
+  "dev": { "port": 8788 }
+}
